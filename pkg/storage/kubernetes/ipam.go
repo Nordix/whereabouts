@@ -696,8 +696,11 @@ func IPManagementKubernetesUpdate(ctx context.Context, mode int, ipam *Kubernete
 			break RETRYLOOP
 		}
 
+		// Only update OverlappingRangeAllocation if IPPool update succeeded
+		// This prevents orphaned OverlappingRangeIPReservations when IPPool update fails
+		// due to concurrent updates exhausting retries (fixes race condition in issue #110)
 		if ipamConf.OverlappingRanges {
-			if !skipOverlappingRangeUpdate {
+			if err == nil && !skipOverlappingRangeUpdate {
 				err = overlappingrangestore.UpdateOverlappingRangeAllocation(requestCtx, mode, ipforoverlappingrangeupdate,
 					ipamConf.GetPodRef(), ipam.IfName, ipamConf.NetworkName)
 				if err != nil {
